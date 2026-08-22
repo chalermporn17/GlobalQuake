@@ -1,0 +1,23 @@
+services:
+  gqserver:
+    build: .
+    container_name: gqserver
+    restart: unless-stopped
+    ports:
+      - "38000:38000"   # client socket API
+      - "8080:8080"     # FDSNWS event API (enable via autoStartFDSNWSEventServer)
+    volumes:
+      # persisted: settings, station database, archives, logs, JSON dumps
+      - ./ gqserver-data:/home/gq/.GlobalQuakeServerData
+      # cluster/station JSON dumps written to working dir
+      - ./gqserver-json:/home/gq/stationData
+      - ./gqserver-json-eq:/home/gq/eqData
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xmx2G"
+    # Optional CLI overrides:
+    # command: ["--clients", "32"]
+
+volumes:
+  gqserver-data:
+  gqserver-json:
+  gqserver-json-eq:
