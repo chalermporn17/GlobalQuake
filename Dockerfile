@@ -7,6 +7,7 @@ WORKDIR /src
 # Copy build files first for layer caching
 COPY pom.xml ./
 COPY GlobalQuakeAPI/pom.xml GlobalQuakeAPI/
+COPY GlobalQuakeClient/pom.xml GlobalQuakeClient/
 COPY GlobalQuakeCore/pom.xml GlobalQuakeCore/
 COPY GlobalQuakeServer/pom.xml GlobalQuakeServer/
 COPY libs ./libs
