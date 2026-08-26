@@ -49,7 +49,13 @@ public class EarthquakeAnalysis {
     private static final boolean CHECK_DISTANT_EVENT_STATIONS = false;
     private static final int DEPTH_ITERS_POLYGONS = 12;
     protected static final double NO_MAGNITUDE = -999.0;
-    private static final boolean CHECK_DELTA_P = false;
+    private static final boolean CHECK_DELTA_P = true;
+
+    // Azimuth gap check (sparse SEA network tuning)
+    private static final boolean CHECK_AZIMUTH_GAP = true;
+    private static final double AZIMUTH_GAP_LIMIT_DEFAULT = 270.0;
+    private static final double AZIMUTH_GAP_LIMIT_MANY_STATIONS = 300.0;
+    private static final int AZIMUTH_GAP_MANY_STATIONS_COUNT = 6;
 
     private static final boolean ONLY_SELECT_BETTER = true;
     // NOTE: I edit here
@@ -235,7 +241,7 @@ public class EarthquakeAnalysis {
         long deltaP = events.get((int) ((events.size() - 1) * 0.75)).pWave()
                 - events.get((int) ((events.size() - 1) * 0.25)).pWave();
 
-        long limit = 600 + (long) Math.sqrt(distFromRoot) * 60;
+        long limit = 500 + (long) Math.sqrt(distFromRoot) * 50;
 
         Logger.tag("Hypocs").debug("deltaP: %d ms, limit for %.1f km is %d ms".formatted(deltaP, distFromRoot, limit));
 
@@ -1496,6 +1502,18 @@ public class EarthquakeAnalysis {
             }
         }
 
+        if (CHECK_AZIMUTH_GAP && cluster.getEarthquake() == null) {
+            double limit = bestHypocenter.correctEvents >= AZIMUTH_GAP_MANY_STATIONS_COUNT
+                    ? AZIMUTH_GAP_LIMIT_MANY_STATIONS
+                    : AZIMUTH_GAP_LIMIT_DEFAULT;
+            double gap = azimuthGap(bestHypocenter, events);
+            if (gap > limit) {
+                Logger.tag("Hypocs").info("Azimuth gap %.1f° exceeds limit %.1f° (%d stations), rejecting new quake"
+                        .formatted(gap, limit, bestHypocenter.correctEvents));
+                return HypocenterCondition.AZIMUTH_GAP_TOO_LARGE;
+            }
+        }
+
         if (previousHypocenter != null) {
             if (bestHypocenter.quality.getSummary().ordinal() > previousHypocenter.quality.getSummary().ordinal()) {
                 return HypocenterCondition.PREVIOUS_WAS_BETTER_QUALITY;
@@ -1537,6 +1555,21 @@ public class EarthquakeAnalysis {
             qua[q]++;
         }
         return good;
+    }
+
+    private double azimuthGap(Hypocenter hyp, List<PickedEvent> events) {
+        if (events.size() < 2) {
+            return 360.0;
+        }
+        double[] bearings = events.stream()
+                .mapToDouble(event -> GeoUtils.calculateAngle(hyp.lat, hyp.lon, event.lat(), event.lon()))
+                .sorted()
+                .toArray();
+        double maxGap = 360.0 - (bearings[bearings.length - 1] - bearings[0]);
+        for (int i = 1; i < bearings.length; i++) {
+            maxGap = Math.max(maxGap, bearings[i] - bearings[i - 1]);
+        }
+        return maxGap;
     }
 
     private void calculateMagnitude(Cluster cluster, Hypocenter hypocenterLocation, Hypocenter hypocenterAssign) {
