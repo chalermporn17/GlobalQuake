@@ -41,4 +41,4 @@ EXPOSE 38000
 EXPOSE 8080
 
 # CPU-only hypocenter search (no CUDA lib shipped)
-ENTRYPOINT ["java", "-Xmx2G", "-jar", "GlobalQuakeServer.jar", "--headless"]
+ENTRYPOINT ["java", "-Xmx4G", "-jar", "GlobalQuakeServer.jar", "--headless"]
